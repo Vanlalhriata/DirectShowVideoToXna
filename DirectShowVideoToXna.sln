@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirectShowVideoToXna", "Dir
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "Demo\Demo\Demo.csproj", "{7C2718A3-FD1E-4074-B78A-D1F3E66C2B0D}"
 EndProject
-Project("{96E2B04D-8817-42C6-938A-82C39BA4D311}") = "DemoContent", "Demo\DemoContent\DemoContent.contentproj", "{90B353FF-8D4E-41AF-89B4-47637090D2FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DemoContent", "Demo\DemoContent\DemoContent.contentproj", "{90B353FF-8D4E-41AF-89B4-47637090D2FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -22,10 +22,10 @@ namespace DirectShowVideoToXna
 
         private const int DEVICE_ID = 0;
 
-        private bool isFrameReady;
-        private bool isRunning;
         private Texture2D textureRGBA;
         private byte[] bufferRGBA;
+
+        private int pixelCount;
 
         private int width;
         private int height;
@@ -37,9 +37,7 @@ namespace DirectShowVideoToXna
 
         private ISampleGrabber sampleGrabber;
 
-        //private Thread updateThread;
-
-        static readonly object lockObect = new object();
+        private static readonly object lockObject = new object();
         private int hr;
 
         #endregion Fields
@@ -60,7 +58,7 @@ namespace DirectShowVideoToXna
                 if (textureRGBA.GraphicsDevice.Textures[0] == textureRGBA)
                     textureRGBA.GraphicsDevice.Textures[0] = null;
 
-                lock(lockObect)
+                lock(lockObject)
                 {
                     textureRGBA.SetData(bufferRGBA);
                 }
@@ -70,6 +68,8 @@ namespace DirectShowVideoToXna
         }
 
         #endregion
+
+        public byte[] BufferGray { get; private set; }
 
         #endregion Properties
 
@@ -83,20 +83,18 @@ namespace DirectShowVideoToXna
 
         public override void Initialize()
         {
-            isFrameReady = false;
-
             width = Game.GraphicsDevice.Viewport.Width;
             height = Game.GraphicsDevice.Viewport.Height;
-            fps = 30;
+            fps = 2;
+
+            pixelCount = width * height;
 
             textureRGBA = new Texture2D(Game.GraphicsDevice, width, height);
-            bufferRGBA = new byte[width * height * 4];
+            bufferRGBA = new byte[pixelCount * 4];
+            BufferGray = new byte[pixelCount];
 
             InitializeCapture();
             mediaControl.Run();
-
-            //updateThread = new Thread(UpdateGrayBuffer);
-            //updateThread.Start();
 
             base.Initialize();
         }
@@ -113,7 +111,6 @@ namespace DirectShowVideoToXna
             IBaseFilter videoInput = GetVideoInputObject();
             if (null != videoInput)
             {
-                isRunning = true;
                 SetConfigurations(videoInput);
 
                 sampleGrabber = new SampleGrabber() as ISampleGrabber;
@@ -138,7 +135,6 @@ namespace DirectShowVideoToXna
 
                 Marshal.ReleaseComObject(videoInput);
             }
-
         }
 
         #endregion Initialization
@@ -147,7 +143,6 @@ namespace DirectShowVideoToXna
 
         protected override void Dispose(bool disposing)
         {
-            isRunning = false;
             Thread.Sleep(100); // Allow some time to process the cam buffer
 
             if (null != mediaControl)
@@ -170,26 +165,31 @@ namespace DirectShowVideoToXna
 
         #endregion Dispose
 
-        #region Loop
-
-        public override void Update(GameTime gameTime)
-        {
-            // TODO: UpdateGrayBuffer
-
-            base.Update(gameTime);
-        }
-
-        #endregion Loop
-
         #region ISampleGrabber implementation callbacks
 
         public int BufferCB(double SampleTime, IntPtr pBuffer, int BufferLen)
         {
-            lock (lockObect)
+            lock (lockObject)
             {
                 Marshal.Copy(pBuffer, bufferRGBA, 0, BufferLen);
+
+                // Use this block for managed code
+                //for (int i = BufferGray.Length - 1; i >= 0; i--)
+                //{
+                //    BufferGray[i] = Marshal.ReadByte(pBuffer, i * 4);
+                //}
+
+                unsafe
+                {
+                    byte* p = (byte*)pBuffer.ToPointer();
+
+                    for (int i = pixelCount - 1; i >= 0; i--)
+                    {
+                        BufferGray[pixelCount - i - 1] = *(p + (i * 4));
+                    }
+                }
             }
-            isFrameReady = true;
+            
             return 0;
         }
 
@@ -261,6 +261,15 @@ namespace DirectShowVideoToXna
             //DsError.ThrowExceptionForHR(hr);
 
             DsUtils.FreeAMMediaType(media);
+        }
+
+        // TODO : Remove from production code
+        private DateTime last = DateTime.Now;
+        private void DebugFps()
+        {
+            DateTime now = DateTime.Now;
+            System.Diagnostics.Debug.WriteLine("FPS: " + 1.0 / (now - last).TotalSeconds);
+            last = now;
         }
 
         #endregion Utilitary methods
